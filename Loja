@@ -1,0 +1,295 @@
+import sqlite3
+
+def criar_banco_de_dados():
+    conexao = sqlite3.connect('conviterias.db')
+    cursor = conexao.cursor()
+    
+    # Criar tabela de itens
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS itens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        preco REAL NOT NULL
+    )
+    ''')
+    
+    # Criar tabela de carrinho
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS carrinho (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL,
+        quantidade INTEGER NOT NULL,
+        FOREIGN KEY(item_id) REFERENCES itens(id)
+    )
+    ''')
+    
+    conexao.commit()
+    conexao.close()
+
+if __name__ == "__main__":
+    criar_banco_de_dados()
+
+import sqlite3
+
+class SistemaDeVendas:
+    def __init__(self):
+        self.conexao = sqlite3.connect('conviterias.db')
+        self.cursor = self.conexao.cursor()
+    
+    def adicionar_item(self, nome, preco):
+        self.cursor.execute('''
+        INSERT INTO itens (nome, preco) VALUES (?, ?)
+        ''', (nome, preco))
+        self.conexao.commit()
+        print(f"Item '{nome}' adicionado com preço R${preco:.2f}.")
+    
+    def listar_itens(self):
+        self.cursor.execute('SELECT * FROM itens')
+        itens = self.cursor.fetchall()
+        if not itens:
+            print("Nenhum item disponível.")
+        else:
+            print("Itens disponíveis:")
+            for i, (id, nome, preco) in enumerate(itens, start=1):
+                print(f"{i}. {nome} - R${preco:.2f}")
+    
+    def adicionar_ao_carrinho(self, item_index, quantidade):
+        self.cursor.execute('SELECT id FROM itens')
+        itens = self.cursor.fetchall()
+        if item_index < 1 or item_index > len(itens):
+            print("Índice de item inválido.")
+            return
+        
+        item_id = itens[item_index - 1][0]
+        self.cursor.execute('''
+        INSERT INTO carrinho (item_id, quantidade) VALUES (?, ?)
+        ''', (item_id, quantidade))
+        self.conexao.commit()
+        print(f"{quantidade}x Item ID {item_id} adicionados ao carrinho.")
+    
+    def ajustar_quantidade(self, item_id, nova_quantidade):
+        self.cursor.execute('''
+        UPDATE carrinho SET quantidade = ? WHERE item_id = ?
+        ''', (nova_quantidade, item_id))
+        self.conexao.commit()
+        print(f"Quantidade do Item ID {item_id} ajustada para {nova_quantidade}.")
+    
+    def remover_item_do_carrinho(self, item_id):
+        self.cursor.execute('''
+        DELETE FROM carrinho WHERE item_id = ?
+        ''', (item_id,))
+        self.conexao.commit()
+        print(f"Item ID {item_id} removido do carrinho.")
+    
+    def calcular_total(self):
+        self.cursor.execute('''
+        SELECT itens.preco, carrinho.quantidade
+        FROM carrinho
+        JOIN itens ON carrinho.item_id = itens.id
+        ''')
+        items = self.cursor.fetchall()
+        total = sum(preco * quantidade for preco, quantidade in items)
+        return total
+    
+    def mostrar_carrinho(self):
+        self.cursor.execute('''
+        SELECT itens.nome, itens.preco, carrinho.quantidade
+        FROM carrinho
+        JOIN itens ON carrinho.item_id = itens.id
+        ''')
+        items = self.cursor.fetchall()
+        if not items:
+            print("O carrinho está vazio.")
+        else:
+            print("Itens no carrinho:")
+            for nome, preco, quantidade in items:
+                print(f"- {nome} ({quantidade}x) - R${preco:.2f} cada")
+            print(f"Total: R${self.calcular_total():.2f}")
+
+    def __del__(self):
+        self.conexao.close()
+
+# Função principal para interação com o usuário
+def main():
+    sistema = SistemaDeVendas()
+
+    while True:
+        print("\n1. Listar Itens Disponíveis")
+        print("2. Adicionar Item ao Carrinho")
+        print("3. Ajustar Quantidade do Item no Carrinho")
+        print("4. Remover Item do Carrinho")
+        print("5. Mostrar Carrinho")
+        print("6. Finalizar Compra")
+        print("7. Adicionar Novo Item")
+        print("8. Sair")
+
+        opcao = input("Escolha uma opção: ")
+
+        if opcao == "1":
+            sistema.listar_itens()
+        elif opcao == "2":
+            sistema.listar_itens()
+            item_index = int(input("Escolha o número do item para adicionar ao carrinho: "))
+            quantidade = int(input("Digite a quantidade: "))
+            sistema.adicionar_ao_carrinho(item_index, quantidade)
+        elif opcao == "3":
+            item_id = int(input("Digite o ID do item para ajustar a quantidade: "))
+            nova_quantidade = int(input("Digite a nova quantidade: "))
+            sistema.ajustar_quantidade(item_id, nova_quantidade)
+        elif opcao == "4":
+            item_id = int(input("Digite o ID do item para remover do carrinho: "))
+            sistema.remover_item_do_carrinho(item_id)
+        elif opcao == "5":
+            sistema.mostrar_carrinho()
+        elif opcao == "6":
+            print(f"Total da compra: R${sistema.calcular_total():.2f}")
+            break
+        elif opcao == "7":
+            nome = input("Digite o nome do novo item: ")
+            preco = float(input("Digite o preço do novo item: "))
+            sistema.adicionar_item(nome, preco)
+        elif opcao == "8":
+            print("Saindo...")
+            break
+        else:
+            print("Opção inválida. Tente novamente.")
+
+if __name__ == "__main__":
+    main()
+
+
+
+import tkinter as tk
+from tkinter import messagebox
+import sqlite3
+
+class SistemaDeVendas:
+    def __init__(self):
+        self.conexao = sqlite3.connect('conviterias.db')
+        self.cursor = self.conexao.cursor()
+
+    def adicionar_item(self, nome, preco):
+        self.cursor.execute('INSERT INTO itens (nome, preco) VALUES (?, ?)', (nome, preco))
+        self.conexao.commit()
+
+    def listar_itens(self):
+        self.cursor.execute('SELECT * FROM itens')
+        return self.cursor.fetchall()
+
+    def adicionar_ao_carrinho(self, item_id, quantidade):
+        self.cursor.execute('INSERT INTO carrinho (item_id, quantidade) VALUES (?, ?)', (item_id, quantidade))
+        self.conexao.commit()
+
+    def ajustar_quantidade(self, item_id, nova_quantidade):
+        self.cursor.execute('UPDATE carrinho SET quantidade = ? WHERE item_id = ?', (nova_quantidade, item_id))
+        self.conexao.commit()
+
+    def remover_item_do_carrinho(self, item_id):
+        self.cursor.execute('DELETE FROM carrinho WHERE item_id = ?', (item_id,))
+        self.conexao.commit()
+
+    def calcular_total(self):
+        self.cursor.execute('SELECT itens.preco, carrinho.quantidade FROM carrinho JOIN itens ON carrinho.item_id = itens.id')
+        items = self.cursor.fetchall()
+        total = sum(preco * quantidade for preco, quantidade in items)
+        return total
+
+    def mostrar_carrinho(self):
+        self.cursor.execute('SELECT itens.nome, itens.preco, carrinho.quantidade FROM carrinho JOIN itens ON carrinho.item_id = itens.id')
+        return self.cursor.fetchall()
+
+    def __del__(self):
+        self.conexao.close()
+
+class Aplicativo(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.sistema = SistemaDeVendas()
+        self.title("Sistema de Vendas de Conviterias")
+        self.geometry("600x400")
+        self.create_widgets()
+
+    def create_widgets(self):
+        self.lista_itens_button = tk.Button(self, text="Listar Itens Disponíveis", command=self.listar_itens)
+        self.lista_itens_button.pack()
+
+        self.carrinho_button = tk.Button(self, text="Mostrar Carrinho", command=self.mostrar_carrinho)
+        self.carrinho_button.pack()
+
+        self.finalizar_button = tk.Button(self, text="Finalizar Compra", command=self.finalizar_compra)
+        self.finalizar_button.pack()
+
+        self.adicionar_item_button = tk.Button(self, text="Adicionar Novo Item", command=self.adicionar_item)
+        self.adicionar_item_button.pack()
+
+    def listar_itens(self):
+        itens = self.sistema.listar_itens()
+        lista = "\n".join(f"{id}: {nome} - R${preco:.2f}" for id, nome, preco in itens)
+        messagebox.showinfo("Itens Disponíveis", lista)
+
+    def mostrar_carrinho(self):
+        items = self.sistema.mostrar_carrinho()
+        if not items:
+            messagebox.showinfo("Carrinho", "O carrinho está vazio.")
+            return
+        lista = "\n".join(f"{nome} ({quantidade}x) - R${preco:.2f} cada" for nome, preco, quantidade in items)
+        lista += f"\n\nTotal: R${self.sistema.calcular_total():.2f}"
+        messagebox.showinfo("Carrinho", lista)
+
+    def finalizar_compra(self):
+        total = self.sistema.calcular_total()
+        messagebox.showinfo("Finalizar Compra", f"Total da compra: R${total:.2f}")
+
+    def adicionar_item(self):
+        nome = tk.simpledialog.askstring("Novo Item", "Digite o nome do novo item:")
+        preco = tk.simpledialog.askfloat("Novo Item", "Digite o preço do novo item:")
+        if nome and preco is not None:
+            self.sistema.adicionar_item(nome, preco)
+            messagebox.showinfo("Adicionar Item", f"Item '{nome}' adicionado com preço R${preco:.2f}.")
+
+if __name__ == "__main__":
+    app = Aplicativo()
+    app.mainloop()
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Itens Disponíveis</title>
+</head>
+<body>
+    <h1>Itens Disponíveis</h1>
+    <ul>
+        {% for item in itens %}
+        <li>
+            {{ item[1] }} - R$ {{ item[2] }}
+            <form action="{{ url_for('adicionar', item_id=item[0]) }}" method="post" style="display:inline;">
+                <input type="number" name="quantidade" value="1" min="1">
+                <button type="submit">Adicionar ao Carrinho</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    <a href="{{ url_for('carrinho') }}">Ver Carrinho</a>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrinho</title>
+</head>
+<body>
+    <h1>Carrinho</h1>
+    <ul>
+        {% for item in items %}
+        <li>{{ item[0] }} ({{ item[2] }}x) - R$ {{ item[1] }} cada</li>
+        {% endfor %}
+    </ul>
+    <h2>Total: R$ {{ total }}</h2>
+    <a href="{{ url_for('index') }}">Voltar à Lista de Itens</a>
+</body>
+</html>
