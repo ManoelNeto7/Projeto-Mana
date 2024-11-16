@@ -332,3 +332,4 @@ def tela_pedidos():
 # Inicialização
 if __name__ == "__main__":
     tela_login()
+RUN pip freeze > requirements.txt
